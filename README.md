@@ -119,8 +119,8 @@ export const templates: AgentTemplateConfig[] = [
     description: 'Manages orders, cancellations, and refunds',
     category: 'automation',
     executionMode: 'channel',
-    orchestrator: 'sdk',         // Simple tasks
-    model: 'claude-sonnet-4-5',
+    orchestrator: 'sdk',
+    model: 'auto',               // Let the platform choose the best model
     mcpServers: {
       orders: { type: 'http', url: process.env['MCP_EXTERNAL_URL']! }
     },

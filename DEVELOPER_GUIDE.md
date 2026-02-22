@@ -130,7 +130,7 @@ export const templates: AgentTemplateConfig[] = [
     category: 'automation',
     executionMode: 'channel',
     orchestrator: 'sdk',
-    model: 'claude-sonnet-4-5',
+    model: 'auto',
     mcpServers: MCP_SERVER,
     allowedTools: [],
     maxTurns: 10,
@@ -213,8 +213,8 @@ MCP_PORT=9012 pm2 start dist/index.js --name orders-mcp
 | `icon` | string | No | Lucide icon name (e.g. `activity`, `mail`, `search`) |
 | `category` | string | Yes | `marketing`, `automation`, `analytics`, `content`, `support` |
 | `executionMode` | string | Yes | `channel` (chat), `client` (runs on customer container), `sandbox` (isolated) |
-| `orchestrator` | string | Yes | `sdk`, `pev`, `swarm`, or `auto` (see below) |
-| `model` | string | Yes | `claude-sonnet-4-5`, `claude-opus-4-6`, `claude-haiku-4-5` |
+| `orchestrator` | string | Yes | `sdk` (use SDK for all agents) |
+| `model` | string | Yes | `auto` — let the platform choose the best model |
 | `mcpServers` | object | Yes | MCP servers this agent can access |
 | `allowedTools` | string[] | Yes | Local tools allowed (use `[]` for MCP-only agents) |
 | `maxTurns` | number | No | Max tool-call turns (default: 10) |
@@ -222,48 +222,21 @@ MCP_PORT=9012 pm2 start dist/index.js --name orders-mcp
 | `tierRequired` | string | No | `free`, `pro`, `enterprise` |
 | `triggers` | string[] | No | `manual`, `webhook`, `schedule`, `channel` |
 | `connectedServices` | string[] | No | Services the agent needs (e.g. `instagram`, `dataforseo`) |
-| `pevConfig` | object | No | PEV orchestrator config (see below) |
+| `pevConfig` | object | No | Reserved for future PEV orchestrator support |
 | `systemPrompt` | string | Yes | The agent's system prompt |
-
-### PEV Config (for `orchestrator: 'pev'`)
-
-```typescript
-pevConfig: {
-  maxReplanAttempts: 2,       // How many times to re-plan on failure
-  maxSubTasks: 8,             // Max sub-tasks in a plan
-  maxTurnsPerSubtask: 10,     // Max turns per sub-task
-  enableStablePrefix: true,   // Cache stable prompt prefix
-  enableTodoRecitation: true, // Recite todo list for context
-  enableContextDiversity: true,
-  enableStrategyRotation: true,
-  earlyTerminationScore: 0.90, // Stop early if confidence is high
-  enableFailureMemory: true,   // Remember failed approaches
-}
-```
 
 ---
 
-## Orchestrator Selection Guide
+## Orchestrator
 
-| Orchestrator | When to Use | Turns | Cost | Example |
-|---|---|---|---|---|
-| `sdk` | Simple tasks, 1-3 tool calls | 5-15 | Low | "List my orders", "Create a post" |
-| `pev` | Multi-step, needs planning | 15-30 | Medium | "Audit site, fix all issues, verify" |
-| `swarm` | Multi-domain, parallel agents | 5 (router) | Varies | "Run SEO + content + ads campaign" |
-| `auto` | Let the platform decide | Auto | Auto | When you're unsure |
+All agents use the **SDK** orchestrator. The Claude SDK handles tool calling, model selection, and execution.
 
-### SDK (Simple)
-Direct tool calling. The LLM reads the prompt, calls tools, returns result. Best for straightforward tasks.
+```typescript
+orchestrator: 'sdk',
+model: 'auto',        // Let the platform choose the best model
+```
 
-### PEV (Plan-Execute-Verify)
-1. **Plan**: Break request into numbered sub-tasks
-2. **Execute**: Work through each sub-task with tools
-3. **Verify**: Check results, re-plan if needed
-
-Use when tasks require multiple steps, error recovery, or verification.
-
-### Swarm (Multi-Agent)
-A router agent classifies intent and delegates to specialist agents. Use when your module has multiple specialist agents that handle different domains.
+Set `model: 'auto'` — the platform selects the best model automatically.
 
 ---
 
@@ -410,7 +383,7 @@ my-module-mcp/
 4. **Every tool checks auth** — `getUserScope(context)` in every execute function
 5. **Templates live in your MCP repo** — not in the orchestrator
 6. **Templates self-register on boot** — via `registerTemplatesWithOrchestrator()`
-7. **Choose the right orchestrator**: `sdk` for simple, `pev` for multi-step, `swarm` for multi-domain
+7. **Use `orchestrator: 'sdk'` and `model: 'auto'`** — let the platform handle model selection
 
 ---
 
@@ -501,15 +474,7 @@ In your MCP repo at `src/templates/index.ts`. They self-register with the orches
 No. Templates auto-register via `registerTemplatesWithOrchestrator()`. Zero orchestrator changes needed.
 
 **Q: What model should I use?**
-- `claude-sonnet-4-5` — best balance of speed and quality (default)
-- `claude-opus-4-6` — most capable, for complex reasoning
-- `claude-haiku-4-5` — fastest, for simple tasks
-
-**Q: How do I add a PEV agent?**
-Set `orchestrator: 'pev'` and add a `pevConfig` object. Increase `maxTurns` and `maxBudgetUsd`.
-
-**Q: How do I create a router (swarm) agent?**
-Set `orchestrator: 'swarm'`. The system prompt should classify intent and name the specialist agent IDs to delegate to.
+Always use `model: 'auto'`. The platform picks the best model automatically.
 
 **Q: Can my agent access multiple MCP servers?**
 Yes. Add multiple entries to `mcpServers`:

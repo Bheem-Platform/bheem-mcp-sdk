@@ -30,7 +30,7 @@ export const templates: AgentTemplateConfig[] = [
     category: 'automation',
     executionMode: 'channel',
     orchestrator: 'sdk',       // Simple — single-turn tool calls
-    model: 'claude-sonnet-4-5',
+    model: 'auto',
     mcpServers: MCP_SERVER,
     allowedTools: [],           // No local tools — all via MCP
     maxTurns: 10,
@@ -66,7 +66,7 @@ Use the analytics tool for metrics:
     category: 'automation',
     executionMode: 'channel',
     orchestrator: 'pev',       // Complex — Plan-Execute-Verify
-    model: 'claude-sonnet-4-5',
+    model: 'auto',
     mcpServers: MCP_SERVER,
     allowedTools: [],
     maxTurns: 25,
