@@ -1,24 +1,23 @@
 /**
- * Item Tools (EXAMPLE — replace with your domain)
+ * Items Domain Tool (EXAMPLE — replace with your domain)
  *
- * This file demonstrates the 4 common tool patterns:
- *   1. LIST   — paginated listing with filters
- *   2. GET    — single item by ID
- *   3. CREATE — create new item (requires auth)
- *   4. ACTION — perform an operation (requires auth)
+ * Claude Code Style: ONE tool per domain with action routing.
+ * Instead of 5 separate tools (list_items, get_item, create_item, etc.),
+ * you have ONE "items" tool with an `action` parameter.
  *
- * Copy this file, rename it, and adapt to your domain.
- * Each tool needs: name, description, inputSchema, execute.
+ * The LLM reads the description to know what actions are available.
+ * This keeps the tool count low (3-5 per module) and context usage minimal.
  *
  * ┌────────────────────────────────────────────────────────┐
- * │  TIPS FOR WRITING GOOD TOOLS                          │
+ * │  HOW CLAUDE CODE DOES IT                              │
  * │                                                       │
- * │  • description is what the LLM reads to decide        │
- * │    when to use your tool — make it clear & specific   │
- * │  • inputSchema uses JSON Schema format                │
- * │  • Always handle errors gracefully (try/catch)        │
- * │  • Check user scope for write operations              │
- * │  • Return structured data, not raw HTML/binary        │
+ * │  Claude Code has ~10 tools (Bash, Read, Write, etc.)  │
+ * │  Bash alone handles: git, npm, docker, curl, python...│
+ * │  The system prompt teaches WHEN to use each.          │
+ * │                                                       │
+ * │  YOUR AGENT: same pattern.                            │
+ * │  One "items" tool handles: list, get, create, update  │
+ * │  The system prompt teaches the workflow.              │
  * └────────────────────────────────────────────────────────┘
  */
 
@@ -27,162 +26,91 @@ import { apiClient } from '../utils/api-client.js';
 import { getUserScope, authHeaders } from '../utils/scope.js';
 
 export const itemTools: McpToolDefinition[] = [
-
-  // ─── Pattern 1: LIST (paginated, filtered) ─────────────
   {
-    name: 'list_items',
-    description: 'List items with optional status filter and pagination',
+    name: 'items',
+    description: `Item management operations. Available actions:
+- list: List items with optional filters (params: status?, limit?, offset?)
+- get: Get item details by ID (params: item_id)
+- create: Create a new item (params: name, description?, tags?)
+- update: Update item fields (params: item_id, name?, description?, tags?)
+- delete: Delete an item (params: item_id)
+- archive: Archive an item (params: item_id, reason?)`,
     inputSchema: {
       type: 'object',
       properties: {
-        status: {
+        action: {
           type: 'string',
-          description: 'Filter by status: active, archived, draft',
+          enum: ['list', 'get', 'create', 'update', 'delete', 'archive'],
+          description: 'The operation to perform',
         },
-        limit: {
-          type: 'number',
-          description: 'Max results to return (default: 20)',
-        },
-        offset: {
-          type: 'number',
-          description: 'Offset for pagination (default: 0)',
+        params: {
+          type: 'object',
+          description: 'Action-specific parameters (see action descriptions above)',
         },
       },
+      required: ['action'],
     },
     execute: async (input, context) => {
       const scope = getUserScope(context);
-      if (scope.role === 'visitor') {
-        return { error: 'Please log in to view items.' };
-      }
+      const p = (input.params || {}) as Record<string, any>;
+      const headers = authHeaders(scope);
+
       try {
-        const params: Record<string, unknown> = {
-          status: input.status,
-          limit: input.limit ?? 20,
-          offset: input.offset ?? 0,
-        };
-        // Scope to user's own items (unless admin)
-        if (!scope.canAccessAll && scope.userId) {
-          params.owner_id = scope.userId;
+        switch (input.action) {
+          case 'list': {
+            if (scope.role === 'visitor') return { error: 'Please log in.' };
+            const params: Record<string, unknown> = {
+              status: p.status,
+              limit: p.limit ?? 20,
+              offset: p.offset ?? 0,
+            };
+            if (!scope.canAccessAll && scope.userId) {
+              params.owner_id = scope.userId;
+            }
+            return (await apiClient.get('/api/items', { params, headers })).data;
+          }
+
+          case 'get': {
+            if (scope.role === 'visitor') return { error: 'Please log in.' };
+            return (await apiClient.get(`/api/items/${p.item_id}`, { headers })).data;
+          }
+
+          case 'create': {
+            if (!scope.canWrite) return { error: 'Write access required.' };
+            const body: Record<string, unknown> = {
+              name: p.name,
+              description: p.description,
+              tags: p.tags,
+            };
+            if (!scope.canAccessAll && scope.userId) {
+              body.owner_id = scope.userId;
+            }
+            return (await apiClient.post('/api/items', body, { headers })).data;
+          }
+
+          case 'update': {
+            if (!scope.canWrite) return { error: 'Write access required.' };
+            const { item_id, ...updates } = p;
+            return (await apiClient.patch(`/api/items/${item_id}`, updates, { headers })).data;
+          }
+
+          case 'delete': {
+            if (!scope.canWrite) return { error: 'Write access required.' };
+            return (await apiClient.delete(`/api/items/${p.item_id}`, { headers })).data;
+          }
+
+          case 'archive': {
+            if (!scope.canWrite) return { error: 'Write access required.' };
+            return (await apiClient.post(`/api/items/${p.item_id}/archive`, {
+              reason: p.reason,
+            }, { headers })).data;
+          }
+
+          default:
+            return { error: `Unknown action: ${input.action}` };
         }
-        const { data } = await apiClient.get('/api/items', {
-          params,
-          headers: authHeaders(scope),
-        });
-        return data;
       } catch (error: any) {
-        return { error: 'Failed to list items', details: error.message };
-      }
-    },
-  },
-
-  // ─── Pattern 2: GET (single item by ID) ────────────────
-  {
-    name: 'get_item',
-    description: 'Get detailed information about a specific item by ID',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        item_id: {
-          type: 'string',
-          description: 'The item ID to look up',
-        },
-      },
-      required: ['item_id'],
-    },
-    execute: async (input, context) => {
-      const scope = getUserScope(context);
-      if (scope.role === 'visitor') {
-        return { error: 'Please log in to view item details.' };
-      }
-      try {
-        const { data } = await apiClient.get(`/api/items/${input.item_id}`, {
-          headers: authHeaders(scope),
-        });
-        return data;
-      } catch (error: any) {
-        if (error.response?.status === 404) {
-          return { error: `Item not found: ${input.item_id}` };
-        }
-        return { error: 'Failed to get item', details: error.message };
-      }
-    },
-  },
-
-  // ─── Pattern 3: CREATE (requires write permission) ─────
-  {
-    name: 'create_item',
-    description: 'Create a new item with a name and optional description',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        name: {
-          type: 'string',
-          description: 'Item name',
-        },
-        description: {
-          type: 'string',
-          description: 'Item description',
-        },
-        tags: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'Tags for categorization',
-        },
-      },
-      required: ['name'],
-    },
-    execute: async (input, context) => {
-      const scope = getUserScope(context);
-      if (!scope.canWrite) {
-        return { error: 'Please log in to create items.' };
-      }
-      try {
-        const body: Record<string, unknown> = { ...input };
-        if (!scope.canAccessAll && scope.userId) {
-          body.owner_id = scope.userId;
-        }
-        const { data } = await apiClient.post('/api/items', body, {
-          headers: authHeaders(scope),
-        });
-        return data;
-      } catch (error: any) {
-        return { error: 'Failed to create item', details: error.message };
-      }
-    },
-  },
-
-  // ─── Pattern 4: ACTION (perform operation on item) ─────
-  {
-    name: 'archive_item',
-    description: 'Archive an item by ID. Archived items are hidden from default listings.',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        item_id: {
-          type: 'string',
-          description: 'The item ID to archive',
-        },
-        reason: {
-          type: 'string',
-          description: 'Optional reason for archiving',
-        },
-      },
-      required: ['item_id'],
-    },
-    execute: async (input, context) => {
-      const scope = getUserScope(context);
-      if (!scope.canWrite) {
-        return { error: 'Please log in to archive items.' };
-      }
-      try {
-        const { data } = await apiClient.post(
-          `/api/items/${input.item_id}/archive`,
-          { reason: input.reason },
-          { headers: authHeaders(scope) },
-        );
-        return data;
-      } catch (error: any) {
-        return { error: 'Failed to archive item', details: error.message };
+        return { error: `Items ${input.action} failed`, details: error.message };
       }
     },
   },
