@@ -27,14 +27,18 @@ cd my-module-mcp
 
 # Configure
 cp .env.example .env
-# Edit .env → set MCP_PORT, BACKEND_API_URL
+# Edit .env:
+#   MCP_PORT=9012
+#   MCP_EXTERNAL_URL=http://<YOUR_SERVER_IP>:9012/mcp
+#   BACKEND_API_URL=https://your-backend-api.com
+#   ORCHESTRATOR_URL=https://agents.agentbheem.com
 
 # Install & run
 npm install
 npm run dev
 
 # Verify
-curl http://localhost:9012/health
+curl http://<YOUR_SERVER_IP>:9012/health
 ```
 
 ---
@@ -110,8 +114,10 @@ Templates define your agents. They self-register with the orchestrator on boot.
 // src/templates/index.ts
 import type { AgentTemplateConfig } from '@bheemverse/mcp-server-core';
 
-const MCP_URL = process.env['MCP_EXTERNAL_URL']
-  || `http://localhost:${process.env['MCP_PORT'] ?? '9012'}/mcp`;
+// MCP_EXTERNAL_URL must be set — the orchestrator (agents.agentbheem.com) needs
+// to reach your MCP server. Use your server's IP or domain.
+// e.g. http://10.0.0.5:9012/mcp or https://orders-mcp.yourdomain.com/mcp
+const MCP_URL = process.env['MCP_EXTERNAL_URL']!; // Required — no localhost fallback
 const MCP_SERVER = { 'my-module': { type: 'http' as const, url: MCP_URL } };
 
 export const templates: AgentTemplateConfig[] = [
@@ -170,7 +176,7 @@ const server = new McpServer({
 
 server.start()
   .then(async () => {
-    const orchestratorUrl = process.env['ORCHESTRATOR_URL'] || 'http://localhost:8009';
+    const orchestratorUrl = process.env['ORCHESTRATOR_URL'] || 'https://agents.agentbheem.com';
     try {
       const result = await registerTemplatesWithOrchestrator(orchestratorUrl, templates, {
         ownedBy: 'orders-mcp',
@@ -411,16 +417,16 @@ my-module-mcp/
 ## Testing
 
 ```bash
-# Health check
-curl http://localhost:9012/health
+# Health check (replace with your server IP/domain and port)
+curl http://<YOUR_SERVER>:9012/health
 
 # List tools (should show your domain tools)
-curl -X POST http://localhost:9012/mcp \
+curl -X POST http://<YOUR_SERVER>:9012/mcp \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 
 # Execute a tool
-curl -X POST http://localhost:9012/mcp \
+curl -X POST http://<YOUR_SERVER>:9012/mcp \
   -H 'Content-Type: application/json' \
   -d '{
     "jsonrpc":"2.0","id":2,"method":"tools/call",
@@ -465,9 +471,9 @@ curl -X POST http://localhost:9012/mcp \
 |----------|---------|-------------|
 | `MCP_PORT` | `9012` | Port for the MCP server |
 | `MCP_AUTH_TOKEN` | — | Optional auth token for MCP endpoints |
-| `MCP_EXTERNAL_URL` | `http://localhost:{port}/mcp` | Reachable URL for agent connections |
-| `BACKEND_API_URL` | `http://localhost:8000` | Your backend API base URL |
-| `ORCHESTRATOR_URL` | `http://localhost:8009` | Orchestrator for template registration |
+| `MCP_EXTERNAL_URL` | — | **Required.** Reachable URL for agent connections (e.g. `http://10.0.0.5:9012/mcp`) |
+| `BACKEND_API_URL` | — | **Required.** Your backend API base URL (e.g. `https://api.yourdomain.com`) |
+| `ORCHESTRATOR_URL` | `https://agents.agentbheem.com` | Bheem orchestrator for template registration |
 
 ---
 
@@ -509,7 +515,7 @@ Set `orchestrator: 'swarm'`. The system prompt should classify intent and name t
 Yes. Add multiple entries to `mcpServers`:
 ```typescript
 mcpServers: {
-  orders: { type: 'http', url: 'http://localhost:9012/mcp' },
-  analytics: { type: 'http', url: 'http://localhost:9013/mcp' },
+  orders: { type: 'http', url: 'http://<YOUR_SERVER>:9012/mcp' },
+  analytics: { type: 'http', url: 'http://<YOUR_SERVER>:9013/mcp' },
 }
 ```

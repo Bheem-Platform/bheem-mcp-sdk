@@ -5,15 +5,22 @@
  * All tools import from here — single place to change the base URL.
  *
  * Pattern: Each MCP server talks to ONE backend API.
- *   - socialselling-mcp → localhost:8000 (Django)
- *   - cloud-mcp         → cloud orchestrator API
+ *   - socialselling-mcp → socialselling backend (Django)
+ *   - cloud-mcp         → cloud backend API
  *   - your-mcp          → your backend service
+ *
+ * IMPORTANT: Set BACKEND_API_URL in your .env — no localhost defaults.
+ * Your MCP server runs on a separate server/container from your backend.
  */
 
 import axios from 'axios';
 
-const BACKEND_API_URL = process.env['BACKEND_API_URL'] ?? 'http://localhost:3000';
-const RAG_SERVICE_URL = process.env['RAG_SERVICE_URL'] ?? 'http://localhost:9100';
+if (!process.env['BACKEND_API_URL']) {
+  console.warn('[api-client] BACKEND_API_URL not set — API calls will fail');
+}
+
+const BACKEND_API_URL = process.env['BACKEND_API_URL'] ?? '';
+const RAG_SERVICE_URL = process.env['RAG_SERVICE_URL'] ?? '';
 
 /**
  * Main backend client.

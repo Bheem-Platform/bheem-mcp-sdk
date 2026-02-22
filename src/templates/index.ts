@@ -13,8 +13,10 @@
 
 import type { AgentTemplateConfig } from '@bheemverse/mcp-server-core';
 
-// MCP server URL — set via env or defaults to localhost
-const MCP_URL = process.env['MCP_EXTERNAL_URL'] || `http://localhost:${process.env['MCP_PORT'] ?? '9012'}/mcp`;
+// MCP_EXTERNAL_URL must be set — the orchestrator (agents.agentbheem.com) needs
+// to reach your MCP server from outside. Use your server's IP or domain.
+// e.g. http://10.0.0.5:9012/mcp or https://orders-mcp.yourdomain.com/mcp
+const MCP_URL = process.env['MCP_EXTERNAL_URL'] || `http://${process.env['MCP_HOST'] ?? '0.0.0.0'}:${process.env['MCP_PORT'] ?? '9012'}/mcp`;
 const MCP_SERVER = { 'my-module': { type: 'http' as const, url: MCP_URL } };
 
 export const templates: AgentTemplateConfig[] = [

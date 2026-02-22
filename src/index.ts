@@ -43,7 +43,7 @@ const server = new McpServer({
 server.start()
   .then(async () => {
     // Self-register templates with the orchestrator
-    const orchestratorUrl = process.env['ORCHESTRATOR_URL'] || 'http://localhost:8009';
+    const orchestratorUrl = process.env['ORCHESTRATOR_URL'] || 'https://agents.agentbheem.com';
     try {
       const result = await registerTemplatesWithOrchestrator(orchestratorUrl, templates, {
         ownedBy: 'my-module-mcp',  // ← Change this

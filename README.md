@@ -11,14 +11,14 @@ cd my-module-mcp
 
 # 2. Configure
 cp .env.example .env
-# → set MCP_PORT, BACKEND_API_URL
+# → set MCP_PORT, MCP_EXTERNAL_URL, BACKEND_API_URL, ORCHESTRATOR_URL
 
 # 3. Install & run
 npm install
 npm run dev
 
 # 4. Verify
-curl http://localhost:9012/health
+curl http://<YOUR_SERVER_IP>:9012/health
 ```
 
 Your MCP server is running. Templates auto-register with the orchestrator on boot.
@@ -122,7 +122,7 @@ export const templates: AgentTemplateConfig[] = [
     orchestrator: 'sdk',         // Simple tasks
     model: 'claude-sonnet-4-5',
     mcpServers: {
-      orders: { type: 'http', url: 'http://localhost:9012/mcp' }
+      orders: { type: 'http', url: process.env['MCP_EXTERNAL_URL']! }
     },
     allowedTools: [],             // Everything via MCP
     systemPrompt: `You are an order management assistant.
@@ -193,16 +193,16 @@ src/
 ## Testing
 
 ```bash
-# Health check
-curl http://localhost:9012/health
+# Health check (replace with your server IP and port)
+curl http://<YOUR_SERVER>:9012/health
 
 # List tools
-curl -X POST http://localhost:9012/mcp \
+curl -X POST http://<YOUR_SERVER>:9012/mcp \
   -H 'Content-Type: application/json' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
 
 # Execute a tool
-curl -X POST http://localhost:9012/mcp \
+curl -X POST http://<YOUR_SERVER>:9012/mcp \
   -H 'Content-Type: application/json' \
   -d '{
     "jsonrpc":"2.0","id":2,"method":"tools/call",
