@@ -39,36 +39,6 @@ curl http://localhost:9012/health
 
 ---
 
-## Core Concept: Claude Code Style Tools
-
-Claude Code has ~10 tools but can do everything — Bash handles any command, Read handles any file, etc. We follow the same pattern:
-
-```
-CLAUDE CODE:                         YOUR AGENT:
-┌────────────────┐                   ┌────────────────┐
-│ Bash   → any cmd│                  │ seo    → 14 actions│
-│ Read   → any file│                 │ leads  → 9 actions │
-│ Write  → any file│                 │ content→ 5 actions │
-│ Grep   → any search│              │                    │
-│                │                   │                    │
-│ ~10 tools total│                   │ 3-5 tools total    │
-│ System prompt  │                   │ System prompt      │
-│ teaches when   │                   │ teaches when       │
-│ to use each    │                   │ to use each        │
-└────────────────┘                   └────────────────────┘
-```
-
-**ONE tool per domain. Actions via `action` parameter. System prompt teaches the workflow.**
-
-### Why?
-
-- LLMs perform better with fewer tools (less decision fatigue)
-- `action` routing keeps context usage minimal
-- System prompts guide the LLM on when/how to use each action
-- Scales to dozens of endpoints without increasing tool count
-
----
-
 ## Step-by-Step: Build Your Agent
 
 ### Step 1: Create a Domain Tool
