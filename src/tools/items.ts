@@ -1,7 +1,7 @@
 /**
  * Items Domain Tool (EXAMPLE — replace with your domain)
  *
- * Claude Code Style: ONE tool per domain with action routing.
+ * ONE tool per domain with action routing.
  * Instead of 5 separate tools (list_items, get_item, create_item, etc.),
  * you have ONE "items" tool with an `action` parameter.
  *
@@ -9,9 +9,9 @@
  * This keeps the tool count low (3-5 per module) and context usage minimal.
  *
  * ┌────────────────────────────────────────────────────────┐
- * │  HOW CLAUDE CODE DOES IT                              │
+ * │  HOW AGENTIC TOOLS WORK                                │
  * │                                                       │
- * │  Claude Code has ~10 tools (Bash, Read, Write, etc.)  │
+ * │  Agents have ~10 tools (Bash, Read, Write, etc.)      │
  * │  Bash alone handles: git, npm, docker, curl, python...│
  * │  The system prompt teaches WHEN to use each.          │
  * │                                                       │

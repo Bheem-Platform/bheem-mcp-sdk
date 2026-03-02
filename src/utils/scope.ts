@@ -18,6 +18,10 @@ export interface UserScope {
   userId?: string;
   userJwt?: string;
   workspaceId?: string;
+  /** Module ID (e.g. 'socialselling', 'trading', 'cloud') */
+  module?: string;
+  /** Agent template ID (e.g. 'seo-analysis-agent') */
+  templateId?: string;
   /** true if role is 'user' or 'admin' */
   canWrite: boolean;
   /** true if role is 'admin' */
@@ -32,6 +36,8 @@ export function getUserScope(context?: McpRequestContext): UserScope {
     userId: claims.user_id as string | undefined,
     userJwt: claims.user_jwt as string | undefined,
     workspaceId: claims.workspace_id as string | undefined,
+    module: claims.module as string | undefined,
+    templateId: claims.template_id as string | undefined,
     canWrite: role !== 'visitor',
     canAccessAll: role === 'admin',
   };
